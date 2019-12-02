@@ -1,0 +1,41 @@
+# tidyverse 설치 및 로딩
+install.packages("tidyverse")
+library(tidyverse)
+
+# df로 부터 날짜, PM10 추출하여 df2 생성
+df <- mise_01
+df2 <- select(df, 날짜, PM10)
+
+# PM10이 Chracter 형태이므로 Numeric 형태로 변경 
+df2$PM10 <- as.numeric(df2$PM10) 
+df2$PM10[is.na(PM10)] <- 0 #문자에서는 결측치 제거가 안되서 이 순서로 
+
+# 일 평균을 구하기 위해, df2$날짜의 시간 제거
+df2$날짜 <- substr(df2$날짜, 1, 10) # df2의 날짜 열의 값에 대해 1자리 부터 10자리까지 추출 
+
+# 일 기준으로 미세먼지 일 평균 산출하여 df3에 저장
+df3 <- df2 %>%
+  group_by(날짜)%>%
+  summarise(일평균 미세먼지 = mean(PM10))
+
+# 2018년 1월 강수량 데이터 불러오기
+ra <- read.csv(file = "C:/Users/USER/Desktop/misemengi/mise_01_rain.csv", header = T)
+
+# ra 강수량 null 값 0으로 대체
+ra[is.na(ra)]<- 0
+
+# msra에 left join을 통해 df3와 ra를 날짜로 조인
+msra <- left_join(df3, ra, by="날짜")
+
+# msra에서 지점 제외
+msra <- select(msra, -지점)
+
+# msra의 날짜에서 일만 남김
+msra$날짜 <- substr(msra$날짜, 9,10)
+
+# p에 ggplot 배경 설정 및 그래프 더하기, 수정
+p <- ggplot(df, aes(x=날짜))
+p2 <- p + geom_line(aes(y=미세먼지평균), group =1)
+p3 <- p2 + geom_bar(aes(y=df$강수량.mm.), stat="identity")
+p4 <- p3 +scale_y_continuous(sec.axis = sec_axis(~.*8, name = "PM10"))
+p5 <- p4 + labs(y="강수량(mm)")
